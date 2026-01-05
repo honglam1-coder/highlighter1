@@ -69,7 +69,17 @@
 <canvas id="board"></canvas>
 
 <script>
-  const STORAGE_KEY = "ANNOT_S5U7L1_01";
+  /*********************************************************
+   * ✅ OPTION 2 (Recommended):
+   * One HTML file, unique storage per slide via URL query.
+   *
+   * Example URLs:
+   *  .../index.html?id=S5U7L1_01
+   *  .../index.html?id=S5U7L1_02
+   *********************************************************/
+  const params = new URLSearchParams(location.search);
+  const slideId = (params.get("id") || "default").trim();
+  const STORAGE_KEY = "ANNOT_" + slideId;
 
   function storageAvailable(type) {
     try {
@@ -241,6 +251,9 @@
   setMode("pen");
   resizeCanvas();
   loadDrawing();
+
+  // Optional: small debug in console
+  // console.log("Annot storage key:", STORAGE_KEY);
 </script>
 
 </body>
