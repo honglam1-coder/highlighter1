@@ -1,191 +1,189 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Transparent Highlighter</title>
+<meta charset="UTF-8" />
+<title>Transparent Highlighter – Storyline Aligned</title>
 
-  <style>
-    :root { --toolbar-h: 54px; }
-    * { box-sizing: border-box; }
-    html, body { height: 100%; }
+<style>
+  :root { --toolbar-h: 54px; }
 
-    body {
-      margin: 0;
-      padding: 0;
-      overflow: hidden;
-      background: #f0f0f0;
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
-    }
+  * { box-sizing: border-box; }
 
-    /* Toolbar */
-    .toolbar {
-      position: fixed;
-      top: 0; left: 0; right: 0;
-      height: var(--toolbar-h);
-      display: flex;
-      align-items: center;
-      justify-content: flex-end;
-      gap: 8px;
-      padding: 8px 12px;
-      background: #fff;
-      border-bottom: 1px solid #e4e4e4;
-      z-index: 2;
-    }
+  html, body {
+    height: 100%;
+    margin: 0;
+    background: #2b2b2b; /* neutral background outside slide */
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
+  }
 
-    button {
-      padding: 6px 10px;
-      border: 1px solid #cfcfcf;
-      border-radius: 8px;
-      background: #fff;
-      cursor: pointer;
-      font-size: 14px;
-    }
+  body {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+  }
 
-    button.active {
-      border-color: #333;
-      box-shadow: inset 0 0 0 2px #3332;
-    }
+  /* Toolbar */
+  .toolbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: var(--toolbar-h);
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 8px 12px;
+    background: #fff;
+    border-bottom: 1px solid #e4e4e4;
+    z-index: 10;
+  }
 
-    /* Background page */
-    .page {
-      position: fixed;
-      inset: var(--toolbar-h) 0 0 0;
-      background: url("S5U7L1-01.png") no-repeat center top;
-      background-size: contain;
-      z-index: 0;
-    }
+  button {
+    padding: 6px 10px;
+    border: 1px solid #cfcfcf;
+    border-radius: 8px;
+    background: #fff;
+    cursor: pointer;
+    font-size: 14px;
+  }
 
-    /* Drawing canvas */
-    canvas {
-      position: fixed;
-      top: var(--toolbar-h);
-      left: 0;
-      width: 100vw;
-      height: calc(100vh - var(--toolbar-h));
-      background: transparent;
-      z-index: 1;
-      touch-action: none;
-    }
-  </style>
+  button.active {
+    border-color: #333;
+    box-shadow: inset 0 0 0 2px #3332;
+  }
+
+  /* ==== STORYLINE STAGE ==== */
+  .stage {
+    position: relative;
+    width: 1276px;
+    height: 1790px;
+    margin-top: var(--toolbar-h);
+    background: #fff;
+    overflow: hidden;
+  }
+
+  /* Background slide image */
+  .page {
+    position: absolute;
+    inset: 0;
+    background: url("S5U7L1-01.png") no-repeat center top;
+    background-size: contain;
+    z-index: 0;
+  }
+
+  /* Drawing canvas */
+  canvas {
+    position: absolute;
+    inset: 0;
+    width: 1276px;
+    height: 1790px;
+    background: transparent;
+    z-index: 1;
+    touch-action: none;
+  }
+</style>
 </head>
 
 <body>
 
-  <!-- Toolbar (NO Next / Prev here) -->
-  <div class="toolbar">
-    <button id="penBtn" class="active">Pen</button>
-    <button id="hlBtn">Highlighter</button>
-    <button id="eraserBtn">Eraser</button>
-    <button id="clearBtn">Clear</button>
-  </div>
+<!-- Toolbar -->
+<div class="toolbar">
+  <button id="penBtn" class="active">Pen</button>
+  <button id="hlBtn">Highlighter</button>
+  <button id="eraserBtn">Eraser</button>
+  <button id="clearBtn">Clear</button>
+</div>
 
-  <!-- Background -->
+<!-- Storyline-aligned stage -->
+<div class="stage">
   <div class="page"></div>
+  <canvas id="board" width="1276" height="1790"></canvas>
+</div>
 
-  <!-- Canvas -->
-  <canvas id="board"></canvas>
+<script>
+  const canvas = document.getElementById("board");
+  const ctx = canvas.getContext("2d");
 
-  <script>
-    const canvas = document.getElementById("board");
-    const ctx = canvas.getContext("2d");
+  const penBtn = document.getElementById("penBtn");
+  const hlBtn = document.getElementById("hlBtn");
+  const eraserBtn = document.getElementById("eraserBtn");
+  const clearBtn = document.getElementById("clearBtn");
 
-    const penBtn = document.getElementById("penBtn");
-    const hlBtn = document.getElementById("hlBtn");
-    const eraserBtn = document.getElementById("eraserBtn");
-    const clearBtn = document.getElementById("clearBtn");
+  let mode = "pen";
+  let drawing = false;
 
-    let mode = "pen";
-    let drawing = false;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
 
-    function resizeCanvas() {
-      const dpr = window.devicePixelRatio || 1;
-      const h = window.innerHeight - 54;
-      const w = window.innerWidth;
+  function setMode(m) {
+    mode = m;
+    penBtn.classList.toggle("active", m === "pen");
+    hlBtn.classList.toggle("active", m === "highlighter");
+    eraserBtn.classList.toggle("active", m === "eraser");
+  }
 
-      canvas.style.width = w + "px";
-      canvas.style.height = h + "px";
-      canvas.width = w * dpr;
-      canvas.height = h * dpr;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  function getPoint(e) {
+    const rect = canvas.getBoundingClientRect();
+    if (e.touches) {
+      return {
+        x: e.touches[0].clientX - rect.left,
+        y: e.touches[0].clientY - rect.top
+      };
     }
+    return { x: e.offsetX, y: e.offsetY };
+  }
 
-    function setMode(m) {
-      mode = m;
-      penBtn.classList.toggle("active", m === "pen");
-      hlBtn.classList.toggle("active", m === "highlighter");
-      eraserBtn.classList.toggle("active", m === "eraser");
-    }
+  function start(e) {
+    drawing = true;
+    ctx.beginPath();
+    const { x, y } = getPoint(e);
+    ctx.moveTo(x, y);
+  }
 
-    function point(e) {
-      const r = canvas.getBoundingClientRect();
-      if (e.touches) {
-        return {
-          x: e.touches[0].clientX - r.left,
-          y: e.touches[0].clientY - r.top
-        };
-      }
-      return { x: e.offsetX, y: e.offsetY };
-    }
+  function draw(e) {
+    if (!drawing) return;
 
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-
-    function start(e) {
-      drawing = true;
-      ctx.beginPath();
-      const { x, y } = point(e);
-      ctx.moveTo(x, y);
-    }
-
-    function draw(e) {
-      if (!drawing) return;
-
-      if (mode === "pen") {
-        ctx.globalCompositeOperation = "source-over";
-        ctx.lineWidth = 2.5;
-        ctx.strokeStyle = "#111";
-      } 
-      else if (mode === "highlighter") {
-        ctx.globalCompositeOperation = "multiply";
-        ctx.lineWidth = 18;
-        ctx.strokeStyle = "rgba(255,255,0,0.15)";
-      } 
-      else if (mode === "eraser") {
-        ctx.globalCompositeOperation = "destination-out";
-        ctx.lineWidth = 22;
-        ctx.strokeStyle = "rgba(0,0,0,1)";
-      }
-
-      const { x, y } = point(e);
-      ctx.lineTo(x, y);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(x, y);
-    }
-
-    function end() {
-      drawing = false;
-      ctx.beginPath();
+    if (mode === "pen") {
       ctx.globalCompositeOperation = "source-over";
+      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = "#111";
+    } else if (mode === "highlighter") {
+      ctx.globalCompositeOperation = "multiply";
+      ctx.lineWidth = 18;
+      ctx.strokeStyle = "rgba(255,255,0,0.15)";
+    } else if (mode === "eraser") {
+      ctx.globalCompositeOperation = "destination-out";
+      ctx.lineWidth = 22;
+      ctx.strokeStyle = "rgba(0,0,0,1)";
     }
 
-    canvas.addEventListener("mousedown", start);
-    canvas.addEventListener("mousemove", draw);
-    canvas.addEventListener("mouseup", end);
-    canvas.addEventListener("mouseleave", end);
+    const { x, y } = getPoint(e);
+    ctx.lineTo(x, y);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+  }
 
-    canvas.addEventListener("touchstart", e => { e.preventDefault(); start(e); }, { passive: false });
-    canvas.addEventListener("touchmove", e => { e.preventDefault(); draw(e); }, { passive: false });
-    canvas.addEventListener("touchend", e => { e.preventDefault(); end(); }, { passive: false });
+  function end() {
+    drawing = false;
+    ctx.beginPath();
+    ctx.globalCompositeOperation = "source-over";
+  }
 
-    penBtn.onclick = () => setMode("pen");
-    hlBtn.onclick = () => setMode("highlighter");
-    eraserBtn.onclick = () => setMode("eraser");
-    clearBtn.onclick = () => ctx.clearRect(0, 0, canvas.width, canvas.height);
+  canvas.addEventListener("mousedown", start);
+  canvas.addEventListener("mousemove", draw);
+  canvas.addEventListener("mouseup", end);
+  canvas.addEventListener("mouseleave", end);
 
-    window.addEventListener("resize", resizeCanvas);
+  canvas.addEventListener("touchstart", e => { e.preventDefault(); start(e); }, { passive: false });
+  canvas.addEventListener("touchmove", e => { e.preventDefault(); draw(e); }, { passive: false });
+  canvas.addEventListener("touchend", e => { e.preventDefault(); end(); }, { passive: false });
 
-    resizeCanvas();
-  </script>
+  penBtn.onclick = () => setMode("pen");
+  hlBtn.onclick = () => setMode("highlighter");
+  eraserBtn.onclick = () => setMode("eraser");
+  clearBtn.onclick = () => ctx.clearRect(0, 0, canvas.width, canvas.height);
+</script>
+
 </body>
 </html>
