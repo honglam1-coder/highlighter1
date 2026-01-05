@@ -57,7 +57,7 @@
   <canvas id="board"></canvas>
 
   <script>
-    // Single background image (must be in the same folder as index.html)
+    // ✅ Only this one background image (must be in the same folder as index.html)
     const BACKGROUND_FILE = "S5U7L1-01.png";
 
     const pageBg     = document.getElementById('pageBg');
@@ -127,10 +127,10 @@
         ctx.lineWidth = 18;
         ctx.strokeStyle = 'rgba(255, 255, 0, 0.15)'; // lighter highlighter
       } else if (mode === 'eraser') {
-        // Erases only what’s on this canvas layer; background image remains
+        // Erases only what's drawn on the canvas; background remains
         ctx.globalCompositeOperation = 'destination-out';
-        ctx.lineWidth = 22; // eraser size
-        ctx.strokeStyle = 'rgba(0,0,0,1)'; // color doesn't matter
+        ctx.lineWidth = 22;
+        ctx.strokeStyle = 'rgba(0,0,0,1)';
       }
 
       const { x, y } = point(e);
@@ -143,11 +143,9 @@
     function end() {
       drawing = false;
       ctx.beginPath();
-      // Always reset blend mode when ending a stroke
       ctx.globalCompositeOperation = 'source-over';
     }
 
-    // Convert event to canvas coords (mouse + touch)
     function point(e) {
       const rect = canvas.getBoundingClientRect();
       if (e.touches && e.touches[0]) {
