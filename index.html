@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Storyline Annotation Overlay (Persistent)</title>
+<title>Storyline Annotation Overlay (Strict Slide Isolation)</title>
 
 <style>
   * { box-sizing: border-box; }
@@ -70,15 +70,39 @@
 
 <script>
   /*********************************************************
-   * ✅ OPTION 2 (Recommended):
-   * One HTML file, unique storage per slide via URL query.
-   *
-   * Example URLs:
-   *  .../index.html?id=S5U7L1_01
-   *  .../index.html?id=S5U7L1_02
+   * 🛠️ DYNAMIC SLIDE ISOLATION FOR ARTICULATE STORYLINE
    *********************************************************/
+  
+  // 1. First try to extract the ?id= from the Web Object iframe source URL
   const params = new URLSearchParams(location.search);
-  const slideId = (params.get("id") || "default").trim();
+  let slideId = (params.get("id") || "").trim();
+
+  // 2. SMART FALLBACK: If no ID parameter was provided, detect Storyline's active slide index
+  if (!slideId) {
+    try {
+      // Traverse up to find the main Storyline player window
+      let win = window;
+      let depth = 0;
+      while (win !== window.top && depth < 5) {
+        if (win.DS && win.story) break;
+        win = win.parent;
+        depth++;
+      }
+      
+      if (win.story && typeof win.story.slideIndex === "number") {
+        slideId = "Slide_" + win.story.slideIndex;
+      } else if (win.DS && typeof win.DS.getSlideIndex === "function") {
+        slideId = "Slide_" + win.DS.getSlideIndex();
+      } else {
+        // Absolute fallback if everything fails (uses unique frame paths)
+        slideId = window.location.pathname.replace(/[^a-zA-Z0-9]/g, "_");
+      }
+    } catch (e) {
+      // Cross-origin fallback safety feature
+      slideId = window.location.pathname.replace(/[^a-zA-Z0-9]/g, "_");
+    }
+  }
+
   const STORAGE_KEY = "ANNOT_" + slideId;
 
   function storageAvailable(type) {
@@ -140,13 +164,16 @@
   function resizeCanvas() {
     const dpr = window.devicePixelRatio || 1;
     const r = canvas.getBoundingClientRect();
-    const saved = getStored();
-
+    
     canvas.width = r.width * dpr;
     canvas.height = r.height * dpr;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-    if (saved) loadDrawing();
+    // Hard wipe to clear previous frame traces
+    ctx.clearRect(0, 0, r.width, r.height);
+    
+    // Freshly load this specific slide's artwork
+    loadDrawing();
   }
 
   setTimeout(resizeCanvas, 50);
@@ -202,12 +229,12 @@
     if (mode === "pen") {
       ctx.globalCompositeOperation = "source-over";
       ctx.lineWidth = 2.5;
-      ctx.strokeStyle = "#d62828"; // 🔴 red pen
+      ctx.strokeStyle = "#d62828"; 
     }
     else if (mode === "highlighter") {
       ctx.globalCompositeOperation = "multiply";
       ctx.lineWidth = 18;
-      ctx.strokeStyle = "rgba(255,230,0,0.35)"; // 🟡 brighter yellow
+      ctx.strokeStyle = "rgba(255,230,0,0.35)"; 
     }
     else if (mode === "eraser") {
       ctx.globalCompositeOperation = "destination-out";
@@ -250,10 +277,7 @@
 
   setMode("pen");
   resizeCanvas();
-  loadDrawing();
 
-  // Optional: small debug in console
-  // console.log("Annot storage key:", STORAGE_KEY);
 </script>
 
 </body>
